@@ -693,7 +693,13 @@ void EOSGMultiplayerPeer::_poll() {
             case Event::EVENT_STORE_PACKET: {
                 uint32_t peer_id = *reinterpret_cast<uint32_t *>(data_ptr->ptrw() + INDEX_PEER_ID);
                 if (!peers.has(peer_id)) {
-                    return; //ignore the packet if we don't have the peer
+                    continue; //ignore the packet if we don't have the peer
+                }
+                //The peer id in the header is the sender's claim; the EOS layer authenticated the
+                //Product User Id the packet came from. Drop a packet whose claim does not match, so
+                //no peer can speak as another.
+                if (eosg_product_user_id_to_string(peers[peer_id]) != packet_data.get_sender()) {
+                    continue;
                 }
 
                 EOS_EPacketReliability reliability = static_cast<EOS_EPacketReliability>(data_ptr->ptrw()[INDEX_TRANSFER_MODE]);
